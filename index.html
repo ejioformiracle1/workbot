@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wealth Fx Limited</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- Base & Reset --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
+            color: #fff;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+            font-size: 14px; 
+        }
+
+        /* --- LIVE WALLPAPER --- */
+        .live-wallpaper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden; background-color: #000;
+        }
+        .grid-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px; z-index: 1;
+        }
+        .glow-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 30, 0, 0.6) 0%, transparent 60%);
+            z-index: 2; animation: pulseGlow 8s infinite alternate;
+        }
+        @keyframes pulseGlow { 0% { opacity: 0.5; transform: scale(1); } 100% { opacity: 1; transform: scale(1.1); } }
+        .scanner-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.4), transparent);
+            z-index: 3; animation: scan 8s linear infinite;
+        }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+        .floating-data-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+        .data-node { position: absolute; color: #00ff00; font-family: monospace; font-weight: bold; text-shadow: 0 0 10px rgba(0, 255, 0, 0.5); animation: floatUp linear infinite; opacity: 0; font-size: 12px; }
+        .data-node.coin i { font-size: 20px; color: #f7931a; }
+        .data-node.coin.eth i { color: #627eea; }
+        .data-node.coin.usdt i { color: #26a17b; }
+        .data-node.profit { color: #00ff00; }
+        .data-node.number { color: #88ff88; opacity: 0.4; }
+        @keyframes floatUp { 0% { transform: translateY(110vh) translateX(0) scale(0.8); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-10vh) translateX(20px) scale(1.1); opacity: 0; } }
+
+        /* ========================================= */
+        /* --- MAIN LAYOUT & VIEWS --- */
+        /* ========================================= */
+        .app-container {
+            position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto;
+        }
+        .view { display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; }
+        .view.active { display: flex; }
+
+        /* ========================================= */
+        /* --- SHARED HEADER --- */
+        /* ========================================= */
+        .header {
+            display: flex; justify-content: space-between; align-items: center; padding: 20px; position: relative; z-index: 20;
+        }
+        .logo { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .lang-wrapper-center { position: absolute; left: 50%; transform: translateX(-50%); }
+        
+        .lang-select {
+            background-color: rgba(30, 30, 30, 0.9); color: #fff; border: 1px solid #444;
+            padding: 8px 12px; border-radius: 4px; font-size: 12px; font-family: 'Inter', sans-serif; width: 160px;
+            appearance: none; outline: none; cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 10px center; background-size: 8px;
+        }
+        .lang-select option { background-color: #111; }
+
+        .menu-btn {
+            background-color: transparent; border: none; width: 40px; height: 40px; border-radius: 6px;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 5px; cursor: pointer;
+            z-index: 101; transition: all 0.3s;
+        }
+        .menu-btn span { display: block; width: 24px; height: 2px; background-color: #ccc; border-radius: 2px; transition: all 0.3s ease; }
+        .menu-btn.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .menu-btn.active span:nth-child(2) { opacity: 0; }
+        .menu-btn.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        
+        .home-menu-btn { background-color: #7a1515; align-items: center; padding: 10px; }
+        .home-menu-btn span { width: 22px; background-color: #fff; }
+
+        /* ========================================= */
+        /* --- HOME VIEW --- */
+        /* ========================================= */
+        .hero-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 0 20px; margin-top: -5vh; }
+        .hero-content h1 { font-size: clamp(1.8rem, 6vw, 2.5rem); font-weight: 800; margin-bottom: 15px; line-height: 1.2; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+        .hero-content p { font-size: 14px; margin-bottom: 30px; color: #ccc; max-width: 300px; line-height: 1.5; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+        .cta-button {
+            background-color: #7a1515; color: #fff; border: none; padding: 15px 25px; border-radius: 6px;
+            font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            width: 100%; max-width: 280px; justify-content: center; box-shadow: 0 6px 20px rgba(0,0,0,0.6); transition: background-color 0.3s;
+        }
+        .cta-button:hover { background-color: #5e0f0f; }
+
+        /* ========================================= */
+        /* --- INNER PAGES --- */
+        /* ========================================= */
+        .inner-page { background-color: rgba(10, 10, 10, 0.98); padding: 20px; align-items: center; }
+        .back-btn { align-self: flex-start; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; margin-bottom: 15px; }
+        .page-title { font-size: 22px; color: #fff; text-align: center; font-weight: 600; margin-bottom: 20px; line-height: 1.2; }
+        .page-content { width: 100%; color: #aaa; font-size: 13px; line-height: 1.6; padding: 0 10px; margin-bottom: 30px; }
+        
+        .form-group { width: 100%; margin-bottom: 15px; text-align: left; }
+        .form-group label { display: flex; align-items: center; font-size: 14px; color: #ddd; margin-bottom: 6px; }
+        .form-group label i { margin-right: 8px; color: #888; width: 16px; text-align: center; font-size: 12px; }
+        
+        /* Applied to both inputs and selects */
+        .form-control { 
+            width: 100%; background-color: #1a1a1a; border: 1px solid #333; padding: 12px; color: #fff; 
+            font-size: 14px; outline: none; border-radius: 4px; font-family: 'Inter', sans-serif;
+        }
+        .form-control::placeholder { color: #666; }
+        
+        /* Styling for disabled inputs */
+        .form-control:disabled { 
+            background-color: #0a0a0a; 
+            color: #666; 
+            cursor: not-allowed; 
+            border-color: #222;
+        }
+        
+        select.form-control { appearance: none; -webkit-appearance: none; cursor: pointer; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 15px center; background-size: 10px; }
+
+        .terms-section { display: flex; align-items: center; justify-content: center; margin: 20px 0; width: 100%; }
+        .terms-label { display: flex; align-items: center; font-size: 13px; cursor: pointer; color: #ccc; }
+        .terms-label input[type="checkbox"] { appearance: none; width: 18px; height: 18px; background-color: #222; border: 1px solid #555; border-radius: 3px; margin-right: 10px; cursor: pointer; position: relative; }
+        .terms-label input[type="checkbox"]:checked { background-color: #7a1515; border-color: #7a1515; }
+        .terms-label input[type="checkbox"]:checked::after { content: '\f00c'; font-family: 'FontAwesome'; color: #fff; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        .action-btn { background-color: #7a1515; color: #fff; border: none; padding: 14px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; border-radius: 6px; cursor: pointer; margin-bottom: 20px; width: 100%; max-width: 280px; transition: background 0.3s; }
+        .action-btn:hover { background-color: #5e0f0f; }
+        .action-btn:disabled { background-color: #333; cursor: not-allowed; color: #888; }
+
+        .reg-header-logo { font-family: 'Impact', sans-serif; font-size: 26px; color: #ddd; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 1px 1px 3px #000; }
+        .reg-header-logo span { color: #00aaff; font-size: 16px; padding: 0 5px; }
+
+        .error-msg {
+            color: #ff4444; font-size: 12px; margin-bottom: 10px; display: none;
+            text-align: center; width: 100%; background: rgba(255, 68, 68, 0.1);
+            padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        /* ========================================= */
+        /* --- MODERN DASHBOARD VIEW --- */
+        /* ========================================= */
+        .dashboard-page {
+            background-color: rgba(8, 8, 10, 0.95); 
+            padding: 0 0 30px 0;
+        }
+        
+        .dash-top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background-color: rgba(15, 15, 18, 0.95); padding: 15px 20px; border-bottom: 1px solid #1f1f23;
+            position: sticky; top: 0; z-index: 50; backdrop-filter: blur(10px);
+        }
+        .user-greeting h3 { font-size: 14px; color: #888; font-weight: 400; margin-bottom: 2px; }
+        .user-greeting p { font-size: 16px; font-weight: 600; color: #fff; }
+        
+        .dash-content-area { padding: 20px; }
+
+        /* Balance Card */
+        .modern-balance-card {
+            background: linear-gradient(135deg, rgba(45, 25, 65, 0.8) 0%, rgba(20, 20, 25, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .modern-balance-card::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(139, 147, 255, 0.15) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .mb-label { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+        .mb-amount { font-size: 34px; font-weight: 700; color: #fff; margin-bottom: 20px; letter-spacing: -0.5px; }
+        
+        .mb-actions { display: flex; gap: 10px; }
+        .btn-action {
+            flex: 1; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 600;
+            display: flex; justify-content: center; align-items: center; gap: 8px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-action:hover { background-color: rgba(255,255,255,0.15); }
+
+        /* Stats Horizontal Scroll Lineup */
+        .stats-scroll-container {
+            display: flex;
+            flex-direction: row;
+            overflow-x: auto;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .stats-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+        .stat-box {
+            flex: 0 0 auto;
+            width: 140px;
+            background-color: #121216; border: 1px solid #1f1f23; border-radius: 12px;
+            padding: 15px; display: flex; flex-direction: column; justify-content: center;
+        }
+        .stat-box .icon { font-size: 20px; margin-bottom: 10px; }
+        .stat-box h3 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+        .stat-box p { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Recent Activity */
+        .section-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+        .activity-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; }
+        .activity-item {
+            background-color: #121216; padding: 15px; border-radius: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid #1f1f23;
+        }
+        .act-info { display: flex; align-items: center; gap: 15px; }
+        .act-icon { width: 35px; height: 35px; border-radius: 50%; background: rgba(0,255,0,0.1); color: #00ff00; display: flex; justify-content: center; align-items: center; font-size: 14px; }
+        .act-details h4 { font-size: 14px; color: #fff; margin-bottom: 2px; }
+        .act-details p { font-size: 12px; color: #666; }
+
+        /* Modern Referral Card */
+        .modern-referral {
+            background: linear-gradient(135deg, rgba(107, 70, 193, 0.15) 0%, rgba(20, 20, 25, 0.95) 100%);
+            border: 1px solid rgba(107, 70, 193, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .ref-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .ref-header i { color: #a78bfa; font-size: 20px; }
+        .ref-header h4 { font-size: 16px; font-weight: 600; color: #fff; }
+        .modern-referral p { font-size: 13px; color: #aaa; line-height: 1.5; margin-bottom: 15px; }
+        
+        .ref-link-box { display: flex; background-color: #000; border-radius: 6px; overflow: hidden; border: 1px solid #333; }
+        .ref-link-box input {
+            flex: 1; background: transparent; border: none; color: #888; padding: 10px; font-size: 13px; outline: none; font-family: monospace;
+        }
+        .ref-link-box button {
+            background-color: #333; border: none; color: #fff; padding: 0 15px; font-size: 12px; cursor: pointer; transition: background 0.2s;
+        }
+        .ref-link-box button:hover { background-color: #444; }
+
+        /* ========================================= */
+        /* --- DASHBOARD SUB-PAGES --- */
+        /* ========================================= */
+        .subpage-header {
+            display: flex; align-items: center; gap: 15px; margin-bottom: 25px;
+        }
+        .subpage-header button {
+            background: #1a1a1a; border: 1px solid #333; color: #fff; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; font-size: 16px;
+        }
+        .subpage-header h2 { font-size: 20px; font-weight: 600; }
+        
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; margin-top: 50px; color: #666;
+        }
+        .empty-state i { font-size: 50px; margin-bottom: 20px; color: #333; }
+        .empty-state h3 { font-size: 18px; color: #aaa; margin-bottom: 10px; }
+        .empty-state p { font-size: 14px; }
+
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { text-align: left; padding: 12px 10px; border-bottom: 1px solid #333; color: #888; font-weight: 500; font-size: 12px; text-transform: uppercase; }
+        .data-table td { padding: 15px 10px; border-bottom: 1px solid #1f1f23; color: #ccc; font-size: 14px; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .status-success { color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+
+        /* ========================================= */
+        /* --- SIDE MENUS --- */
+        /* ========================================= */
+        .side-menu {
+            position: fixed; top: 0; right: -100%; width: 75%; max-width: 320px; height: 100vh;
+            background-color: #0a0a0a; z-index: 100; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 80px 0 30px 0; border-left: 1px solid #1a1a1a;
+        }
+        .side-menu.open { right: 0; }
+        .side-menu ul { list-style: none; }
+        .side-menu a { display: flex; align-items: center; gap: 15px; color: #fff; text-decoration: none; font-size: 16px; text-transform: uppercase; font-weight: 600; padding: 20px 25px; border-bottom: 1px solid #1a1a1a; transition: background-color 0.2s; }
+        .side-menu a:hover { background-color: #111; }
+        .side-menu a i { color: #8a1d1d; font-size: 18px; width: 25px; text-align: center; }
+
+        .dash-side-menu {
+            position: fixed; top: 0; right: -100%; width: 85%; max-width: 340px; height: 100vh;
+            background: #0a0a0d; z-index: 105; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; overflow-y: auto; box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .dash-side-menu.open { right: 0; }
+
+        .dash-menu-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .dash-menu-header span { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px;}
+        .close-menu-btn { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+
+        .dash-profile-section {
+            display: flex; flex-direction: column; align-items: center; padding: 30px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(107, 70, 193, 0.1) 0%, transparent 100%);
+        }
+        .avatar-ring { width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #6b46c1); padding: 3px; margin-bottom: 15px; box-shadow: 0 0 20px rgba(107, 70, 193, 0.4); }
+        .avatar-inner { width: 100%; height: 100%; border-radius: 50%; background-color: #121216; display: flex; justify-content: center; align-items: center; }
+        .avatar-inner i { font-size: 40px; color: #a78bfa; }
+        .dash-profile-section h3 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+        .pro-badge { font-size: 10px; background-color: rgba(107, 70, 193, 0.2); color: #a78bfa; padding: 3px 8px; border-radius: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .dash-accordion-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 20px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.2s; user-select: none;
+        }
+        .dash-accordion-header:hover { background-color: rgba(255,255,255,0.02); }
+        .dash-accordion-header span { font-size: 14px; font-weight: 500; color: #e0e0e0; }
+        .dash-accordion-header i { font-size: 12px; color: #888; transition: transform 0.3s; }
+        
+        .dash-accordion-list {
+            list-style: none; background-color: rgba(0,0,0,0.3);
+            display: none; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dash-accordion-list li a {
+            display: flex; align-items: center; gap: 15px; padding: 15px 20px 15px 35px;
+            color: #aaa; text-decoration: none; font-size: 13px; transition: color 0.2s, background 0.2s;
+        }
+        .dash-accordion-list li a:hover { color: #fff; background-color: rgba(255,255,255,0.05); }
+        .dash-accordion-list li a i { width: 16px; text-align: center; font-size: 14px; color: #6b46c1; }
+
+        .dash-main-links { list-style: none; padding: 10px 0; }
+        .dash-main-links li a {
+            display: flex; align-items: center; gap: 15px; padding: 16px 20px;
+            color: #ccc; text-decoration: none; font-size: 14px; font-weight: 500;
+            transition: all 0.2s; position: relative; cursor: pointer;
+        }
+        .dash-main-links li a:hover { color: #fff; background: linear-gradient(90deg, rgba(107, 70, 193, 0.15) 0%, transparent 100%); }
+        .dash-main-links li a:hover::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background-color: #8b5cf6; }
+        .dash-main-links li a i { width: 20px; text-align: center; font-size: 16px; color: #888; transition: color 0.2s; }
+        .dash-main-links li a:hover i { color: #a78bfa; }
+
+        .dash-menu-footer { margin-top: auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; }
+        .sys-status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;}
+        .sys-status .dot { width: 6px; height: 6px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
+
+        .menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 99; opacity: 0; visibility: hidden; transition: all 0.3s; backdrop-filter: blur(2px); }
+        .menu-overlay.active { opacity: 1; visibility: visible; }
+
+        /* Settings Page List */
+        .lang-list { list-style: none; width: 100%; }
+        .lang-list li { 
+            padding: 15px; border-bottom: 1px solid #222; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center; font-size: 16px;
+        }
+        .lang-list li:hover { background-color: #1a1a1a; }
+        .lang-list li.active { color: #a78bfa; font-weight: 600; }
+        .lang-list li.active::after { content: '\f00c'; font-family: 'FontAwesome'; }
+
+        /* RTL Support */
+        [dir="rtl"] .dash-main-links li a { flex-direction: row-reverse; text-align: right; }
+        [dir="rtl"] .dash-main-links li a:hover::before { left: auto; right: 0; }
+        [dir="rtl"] .dash-accordion-list li a { flex-direction: row-reverse; text-align: right; padding: 15px 35px 15px 20px; }
+        [dir="rtl"] .side-menu a { flex-direction: row-reverse; }
+        [dir="rtl"] .subpage-header { flex-direction: row-reverse; }
+        [dir="rtl"] .form-group label i { margin-right: 0; margin-left: 8px; }
+        [dir="rtl"] .terms-label input[type="checkbox"] { margin-right: 0; margin-left: 10px; }
+        [dir="rtl"] .lang-list li { flex-direction: row-reverse; }
+    </style>
+</head>
+<body>
+
+    <!-- LIVE WALLPAPER ANIMATION -->
+    <div class="live-wallpaper">
+        <div class="grid-overlay"></div>
+        <div class="glow-overlay"></div>
+        <div class="scanner-line"></div>
+        <div class="floating-data-container" id="dataContainer"></div>
+    </div>
+
+    <div class="app-container">
+        
+        <!-- HOME VIEW -->
+        <div class="view active" id="homeView">
+            <div class="header">
+                <div class="logo" data-i18n="logo">WEALTH</div>
+                <div class="lang-wrapper-center">
+                    <select class="lang-select lang-selector">
+                        <!-- Options injected via JS -->
+                    </select>
+                </div>
+                <button class="menu-btn home-menu-btn" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+            </div>
+
+            <div class="hero-content">
+                <h1><span data-i18n="hero_title1">Wealth Fx limited</span><br><span class="uppercase-line" data-i18n="hero_title2">BEST PLATFORM.</span></h1>
+                <p data-i18n="hero_subtitle">Trade popular commodities on our award wining platform.</p>
+                <button class="cta-button" id="goToRegisterBtn">
+                    <span data-i18n="btn_get_started">GET STARTED NOW</span> <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ABOUT VIEW -->
+        <div class="view inner-page" id="aboutView">
+            <button class="back-btn go-home"><i class="fas fa-arrow-left"></i></button>
+            <h2 class="page-title" data-i18n="nav_about">About</h2>
+            <div class="page-content">
+                <p data-i18n="about_text">Welcome to Wealth Fx Limited, your premier destination for secure and highly profitable investments in the global financial markets.</p>
+            </div>
+        </div>
+
+        <!-- SECURITY VIEW (Public) -->
+        <div class="view inner-page" id="securityView">
+            <button class="back-btn go-home"><i class="fas fa-arrow-left"></i></button>
+            <h2 class="page-title" data-i18n="nav_security">Security</h2>
+            <div class="page-content">
+                <p data-i18n="security_text">At Wealth Fx Limited, the security of our users' data and funds is our highest priority.</p>
+            </div>
+        </div>
+
+        <!-- LOGIN VIEW -->
+        <div class="view inner-page" id="loginView">
+            <button class="back-btn go-home"><i class="fas fa-arrow-left"></i></button>
+            <div class="reg-header-logo">WEALTH <span>FX</span> LIMITED</div>
+            <h2 class="page-title" data-i18n="nav_login">Login</h2>
+            <form style="width: 100%; display: flex; flex-direction: column; align-items: center;" id="loginForm">
+                
+                <div class="error-msg" id="loginError">Invalid username/email or password.</div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> <span data-i18n="lbl_user_email">Username or Email</span></label>
+                    <input type="text" id="loginIdentifier" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> <span data-i18n="lbl_password">Password</span></label>
+                    <input type="password" id="loginPassword" class="form-control" required>
+                </div>
+                <button type="submit" class="action-btn" data-i18n="btn_login">LOGIN</button>
+                <p style="color: #aaa; font-size: 13px;"><span data-i18n="dont_have_acc">Don't have an account?</span> <a href="#" id="goToRegisterFromLogin" style="color: #ff4d4d; text-decoration: none;" data-i18n="link_register_here">Register here</a></p>
+            </form>
+        </div>
+
+        <!-- REGISTRATION VIEW -->
+        <div class="view inner-page" id="registrationView">
+            <button class="back-btn go-home"><i class="fas fa-arrow-left"></i></button>
+            <div class="reg-header-logo">WEALTH <span>FX</span> LIMITED</div>
+            <h2 class="page-title" data-i18n="lbl_registration">Member Registration</h2>
+            
+            <form style="width: 100%; display: flex; flex-direction: column; align-items: center;" id="regForm">
+                
+                <div class="error-msg" id="regError">Username or Email already exists!</div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> <span data-i18n="lbl_fullname">Your Full Name:</span></label>
+                    <input type="text" id="regFullName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-tag"></i> <span data-i18n="lbl_username">Your Username</span></label>
+                    <input type="text" id="regUsername" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> <span data-i18n="lbl_email">Email Address</span></label>
+                    <input type="email" id="regEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> <span data-i18n="lbl_password">Password</span></label>
+                    <input type="password" id="regPassword" class="form-control" required>
+                </div>
+
+                <!-- Investment Amount -->
+                <div class="form-group">
+                    <label><i class="fas fa-chart-line"></i> <span data-i18n="lbl_investment">Investment Amount ($)</span></label>
+                    <input type="number" id="regInvestment" class="form-control" placeholder="Enter amount" min="10" required>
+                </div>
+
+                <!-- Dynamic Wallet Section -->
+                <div class="form-group">
+                    <label><i class="fas fa-coins"></i> <span data-i18n="lbl_select_coin">Select Coin</span></label>
+                    <select id="regCoinType" class="form-control" required>
+                        <option value="" disabled selected>Choose a coin</option>
+                        <option value="Bitcoin">Bitcoin (BTC)</option>
+                        <option value="Ethereum">Ethereum (ETH)</option>
+                        <option value="USDT">Tether (USDT)</option>
+                    </select>
+                </div>
+
+                <!-- USDT Network (Hidden by default) -->
+                <div class="form-group" id="usdtNetworkGroup" style="display: none;">
+                    <label><i class="fas fa-network-wired"></i> <span data-i18n="lbl_usdt_network">USDT Network</span></label>
+                    <select id="regUsdtNetwork" class="form-control">
+                        <option value="BEP20">USDT (BEP20)</option>
+                        <option value="TRC20">USDT (TRC20)</option>
+                        <option value="ERC20">USDT (ERC20)</option>
+                    </select>
+                </div>
+
+                <!-- Wallet Address Input -->
+                <div class="form-group">
+                    <label><i class="fas fa-wallet"></i> <span data-i18n="lbl_wallet">Wallet Address</span></label>
+                    <input type="text" id="regWallet" class="form-control" placeholder="Enter your wallet address*" required>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-globe"></i> <span data-i18n="lbl_country">Country:</span></label>
+                    <input type="text" id="regCountry" class="form-control" required>
+                </div>
+                
+                <div class="terms-section">
+                    <label class="terms-label">
+                        <input type="checkbox" id="regTerms" required> <span data-i18n="lbl_terms">I agree with Terms and conditions</span>
+                    </label>
+                </div>
+                <button type="submit" class="action-btn" id="submitRegBtn" data-i18n="btn_register">Register</button>
+            </form>
+        </div>
+
+        <!-- MODERN DASHBOARD VIEW -->
+        <div class="view dashboard-page" id="dashboardView">
+            
+            <div class="dash-top-bar">
+                <div class="user-greeting">
+                    <h3 data-i18n="dash_welcome">Welcome back,</h3>
+                    <p id="displayUsername">Trader</p>
+                </div>
+                <!-- Quick Language Selector in Top Bar -->
+                <div style="display:flex; gap: 10px; align-items:center;">
+                    <select class="lang-select lang-selector" style="width: 100px; padding: 5px; font-size: 11px; background-color: #1a1a1a; border: 1px solid #333;">
+                        <!-- Options injected via JS -->
+                    </select>
+                    <button class="menu-btn" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+                </div>
+            </div>
+
+            <div class="dash-content-area">
+                
+                <!-- Balance Card -->
+                <div class="modern-balance-card">
+                    <div class="mb-label" data-i18n="dash_balance">Total Balance</div>
+                    <div class="mb-amount" id="dashBalance">$0.00</div>
+                    
+                    <div class="mb-actions">
+                        <button class="btn-action" onclick="showWithdrawAlert(event)"><i class="fas fa-arrow-up"></i> <span data-i18n="dash_withdraw">Withdraw</span></button>
+                    </div>
+                </div>
+
+                <!-- Stats Horizontal Scroll Lineup -->
+                <div class="stats-scroll-container">
+                    <div class="stat-box">
+                        <i class="fas fa-arrow-down icon" style="color: #00ff00;"></i>
+                        <h3>$0.00</h3>
+                        <p data-i18n="dash_earned">Earned Total</p>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-arrow-up icon" style="color: #ff4444;"></i>
+                        <h3>$0.00</h3>
+                        <p data-i18n="dash_withdrew">Withdrew Total</p>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-clock icon" style="color: #fbbc05;"></i>
+                        <h3>$0.00</h3>
+                        <p data-i18n="dash_pending">Pending</p>
+                    </div>
+                    <div class="stat-box">
+                        <i class="fas fa-chart-pie icon" style="color: #a78bfa;"></i>
+                        <h3>$0.00</h3>
+                        <p data-i18n="dash_active">Active Deposit</p>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <h3 class="section-title" data-i18n="dash_recent">Recent Activity</h3>
+                <div class="activity-list">
+                    <div class="activity-item">
+                        <div class="act-info">
+                            <div class="act-icon"><i class="fas fa-check"></i></div>
+                            <div class="act-details">
+                                <h4 data-i18n="dash_acc_created">Account Created</h4>
+                                <p data-i18n="dash_just_now">Just now</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Referral Card -->
+                <div class="modern-referral">
+                    <div class="ref-header">
+                        <i class="fas fa-gift"></i>
+                        <h4 data-i18n="dash_invite">Invite & Earn</h4>
+                    </div>
+                    <p data-i18n="dash_invite_desc">Automatically top up your account balance by sharing your referral link. Earn a percentage of whatever plan your referred user buys.</p>
+                    <div class="ref-link-box">
+                        <input type="text" id="dynamicRefLink" value="https://wealthfxlimited.com/?ref=Guest" readonly>
+                        <button onclick="copyRefLink()"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- DASHBOARD SUB-PAGES                        -->
+        <!-- ========================================== -->
+        
+        <!-- Deposit History -->
+        <div class="view dashboard-page" id="depositHistoryView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_dep_hist">Deposit History</h2>
+                </div>
+                <div class="empty-state">
+                    <i class="fas fa-receipt"></i>
+                    <h3 data-i18n="empty_dep_title">No Deposits Yet</h3>
+                    <p data-i18n="empty_dep_desc">Your deposit transactions will appear here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Withdraw History -->
+        <div class="view dashboard-page" id="withdrawHistoryView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_with_hist">Withdraw history</h2>
+                </div>
+                <div class="empty-state">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h3 data-i18n="empty_with_title">No Withdrawals Yet</h3>
+                    <p data-i18n="empty_with_desc">Your withdrawal history will appear here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Transactions -->
+        <div class="view dashboard-page" id="allTransactionsView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_trans">All Transactions</h2>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="table_type">Type</th>
+                            <th data-i18n="table_amount">Amount</th>
+                            <th data-i18n="table_status">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-i18n="dash_acc_created">Account Created</td>
+                            <td>$0.00</td>
+                            <td><span class="status-success" data-i18n="status_completed">Completed</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MY PROFILE -->
+        <div class="view dashboard-page" id="myProfileView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_profile">My profile</h2>
+                </div>
+                <div class="inner-page" style="background: transparent; padding: 0; align-items: flex-start;">
+                    
+                    <div class="form-group">
+                        <label data-i18n="lbl_fullname">Your Full Name:</label>
+                        <input type="text" id="profileFullName" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="lbl_username">Your Username</label>
+                        <input type="text" id="profileUsername" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="lbl_email">Email Address</label>
+                        <input type="email" id="profileEmail" class="form-control">
+                    </div>
+
+                    <!-- Investment Amount: DISABLED -->
+                    <div class="form-group">
+                        <label data-i18n="lbl_investment">Investment Amount ($)</label>
+                        <input type="number" id="profileInvestment" class="form-control" disabled>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label data-i18n="lbl_select_coin">Select Coin</label>
+                        <select id="profileWalletType" class="form-control">
+                            <option value="Bitcoin">Bitcoin (BTC)</option>
+                            <option value="Ethereum">Ethereum (ETH)</option>
+                            <option value="USDT">Tether (USDT)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="profileUsdtNetworkGroup" style="display: none;">
+                        <label data-i18n="lbl_usdt_network">USDT Network</label>
+                        <select id="profileUsdtNetwork" class="form-control">
+                            <option value="BEP20">USDT (BEP20)</option>
+                            <option value="TRC20">USDT (TRC20)</option>
+                            <option value="ERC20">USDT (ERC20)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="lbl_wallet">Wallet Address</label>
+                        <input type="text" id="profileWallet" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="lbl_country">Country:</label>
+                        <input type="text" id="profileCountry" class="form-control">
+                    </div>
+
+                    <button class="action-btn" id="saveProfileBtn" style="margin-top: 10px;" data-i18n="btn_save">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Security -->
+        <div class="view dashboard-page" id="accountSecurityView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_sec">Account security</h2>
+                </div>
+                <div class="inner-page" style="background: transparent; padding: 0; align-items: flex-start;">
+                    <div class="form-group">
+                        <label data-i18n="lbl_current_pw">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control" placeholder="Enter current password">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="lbl_new_pw">New Password</label>
+                        <input type="password" id="newPassword" class="form-control" placeholder="Enter new password">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="lbl_confirm_pw">Confirm New Password</label>
+                        <input type="password" id="confirmNewPassword" class="form-control" placeholder="Confirm new password">
+                    </div>
+                    <button class="action-btn" id="updatePasswordBtn" style="margin-top: 10px;" data-i18n="btn_update_pw">Update Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Settings -->
+        <div class="view dashboard-page" id="languageSettingsView">
+            <div class="dash-content-area">
+                <div class="subpage-header">
+                    <button onclick="showView('dashboard')"><i class="fas fa-arrow-left"></i></button>
+                    <h2 data-i18n="nav_lang_settings">Language Settings</h2>
+                </div>
+                <ul class="lang-list" id="settingsLangList">
+                    <!-- Populated via JS -->
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SIDE MENUS -->
+    <nav class="side-menu" id="sideMenu">
+        <ul>
+            <li><a href="#" onclick="showView('home');"><i class="fas fa-home"></i> <span data-i18n="nav_home">Home</span></a></li>
+            <li><a href="#" onclick="showView('about');"><i class="fas fa-info-circle"></i> <span data-i18n="nav_about">About</span></a></li>
+            <li><a href="#" onclick="showView('security');"><i class="fas fa-shield-alt"></i> <span data-i18n="nav_security">Security</span></a></li>
+            <li><a href="#" onclick="showView('login');"><i class="fas fa-sign-in-alt"></i> <span data-i18n="nav_login">Login</span></a></li>
+        </ul>
+    </nav>
+
+    <!-- DASHBOARD SIDE MENU -->
+    <nav class="dash-side-menu" id="dashSideMenu">
+        <div class="dash-menu-header">
+            <span data-i18n="nav_navigation">Navigation</span>
+            <button class="close-menu-btn" onclick="toggleMenu()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="dash-profile-section">
+            <div class="avatar-ring">
+                <div class="avatar-inner">
+                    <i class="fas fa-user-astronaut"></i>
+                </div>
+            </div>
+            <h3 id="menuUsernameDisplay">Trader</h3>
+            <span class="pro-badge" data-i18n="nav_pro">Pro Account</span>
+        </div>
+
+        <div class="dash-accordion-header" onclick="toggleAccordion()">
+            <span data-i18n="nav_my_account">My account</span>
+            <i class="fas fa-chevron-down" id="accordionIcon"></i>
+        </div>
+        <ul class="dash-accordion-list" id="accordionList">
+            <li><a href="#" onclick="showView('myProfile');"><i class="fas fa-user-edit"></i> <span data-i18n="nav_profile">My profile</span></a></li>
+            <li><a href="#" onclick="showView('accountSecurity');"><i class="fas fa-shield-alt"></i> <span data-i18n="nav_sec">Account security</span></a></li>
+            <li><a href="#" onclick="logoutUser(event)"><i class="fas fa-sign-out-alt"></i> <span data-i18n="nav_logout">Logout</span></a></li>
+        </ul>
+
+        <ul class="dash-main-links">
+            <li><a href="#" onclick="showView('dashboard');"><i class="fas fa-th-large"></i> <span data-i18n="nav_dash">Dashboard</span></a></li>
+            <li><a href="#" onclick="showView('depositHistory');"><i class="fas fa-download"></i> <span data-i18n="nav_dep_hist">Deposit History</span></a></li>
+            <!-- Trigger alert for withdraw -->
+            <li><a href="#" onclick="showWithdrawAlert(event)"><i class="fas fa-hand-holding-usd"></i> <span data-i18n="nav_with_profit">Withdraw profit</span></a></li>
+            <li><a href="#" onclick="showView('withdrawHistory');"><i class="fas fa-history"></i> <span data-i18n="nav_with_hist">Withdraw history</span></a></li>
+            <li><a href="#" onclick="showView('allTransactions');"><i class="fas fa-exchange-alt"></i> <span data-i18n="nav_trans">All Transactions</span></a></li>
+            <li><a href="#" onclick="showView('languageSettings');"><i class="fas fa-language"></i> <span data-i18n="nav_lang_settings">Language Settings</span></a></li>
+        </ul>
+
+        <div class="dash-menu-footer">
+            <div class="sys-status"><span class="dot"></span> <span data-i18n="nav_sys_secure">System Secure</span></div>
+        </div>
+    </nav>
+
+    <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+    <script>
+        // ==========================================
+        // 1. TRANSLATION DICTIONARY & ENGINE
+        // ==========================================
+        
+        const availableLanguages = [
+            { code: 'en', name: 'English' }, { code: 'es', name: 'Español (Spanish)' }, { code: 'fr', name: 'Français (French)' },
+            { code: 'ar', name: 'العربية (Arabic)' }, { code: 'fa', name: 'فارسی (Persian)' }, { code: 'zh', name: '中文 (Chinese)' },
+            { code: 'ru', name: 'Русский (Russian)' }, { code: 'hi', name: 'हिन्दी (Hindi)' }, { code: 'pt', name: 'Português (Portuguese)' },
+            { code: 'de', name: 'Deutsch (German)' }, { code: 'ja', name: '日本語 (Japanese)' }, { code: 'ko', name: '한국어 (Korean)' },
+            { code: 'it', name: 'Italiano (Italian)' }, { code: 'tr', name: 'Türkçe (Turkish)' }, { code: 'vi', name: 'Tiếng Việt (Vietnamese)' },
+            { code: 'pl', name: 'Polski (Polish)' }, { code: 'uk', name: 'Українська (Ukrainian)' }, { code: 'nl', name: 'Nederlands (Dutch)' },
+            { code: 'th', name: 'ไทย (Thai)' }, { code: 'id', name: 'Bahasa Indonesia (Indonesian)' }
+        ];
+
+        const translations = {
+            en: {
+                logo: "WEALTH", hero_title1: "Wealth Fx limited", hero_title2: "BEST PLATFORM.", hero_subtitle: "Trade popular commodities on our award wining platform.", btn_get_started: "GET STARTED NOW", about_text: "Welcome to Wealth Fx Limited, your premier destination for secure and highly profitable investments.", security_text: "At Wealth Fx Limited, the security of our users' data and funds is our highest priority.",
+                nav_home: "Home", nav_about: "About", nav_security: "Security", nav_login: "Login", nav_navigation: "Navigation",
+                nav_pro: "Pro Account", nav_my_account: "My account", nav_profile: "My profile", nav_sec: "Account security", nav_logout: "Logout",
+                nav_dash: "Dashboard", nav_dep_hist: "Deposit History", nav_with_profit: "Withdraw profit", nav_with_hist: "Withdraw history", nav_trans: "All Transactions", nav_sys_secure: "System Secure", nav_lang_settings: "Language Settings",
+                lbl_user_email: "Username or Email", lbl_password: "Password", btn_login: "LOGIN", dont_have_acc: "Don't have an account?", link_register_here: "Register here",
+                lbl_registration: "Member Registration", lbl_fullname: "Your Full Name:", lbl_username: "Your Username", lbl_email: "Email Address", lbl_wallet: "Wallet Address", lbl_country: "Country:", lbl_terms: "I agree with Terms and conditions", btn_register: "Register",
+                lbl_investment: "Investment Amount ($)", lbl_select_coin: "Select Coin", lbl_usdt_network: "USDT Network",
+                dash_welcome: "Welcome back,", dash_balance: "Total Balance", dash_withdraw: "Withdraw", dash_earned: "Earned Total", dash_withdrew: "Withdrew Total", dash_pending: "Pending", dash_active: "Active Deposit", dash_recent: "Recent Activity", dash_acc_created: "Account Created", dash_just_now: "Just now", dash_invite: "Invite & Earn", dash_invite_desc: "Automatically top up your account balance by sharing your referral link.",
+                btn_save: "Save Changes", lbl_current_pw: "Current Password", lbl_new_pw: "New Password", lbl_confirm_pw: "Confirm New Password", btn_update_pw: "Update Password",
+                empty_dep_title: "No Deposits Yet", empty_dep_desc: "Your deposit transactions will appear here.", empty_with_title: "No Withdrawals Yet", empty_with_desc: "Your withdrawal history will appear here.", table_type: "Type", table_amount: "Amount", table_status: "Status", status_completed: "Completed"
+            },
+            es: { /* Spanish */ logo: "WEALTH", hero_title1: "Wealth Fx limitado", hero_title2: "MEJOR PLATAFORMA.", hero_subtitle: "Comercie con materias primas populares en nuestra plataforma galardonada.", btn_get_started: "EMPIEZA AHORA", about_text: "Bienvenido a Wealth Fx Limited, su destino principal para inversiones seguras y altamente rentables.", security_text: "En Wealth Fx Limited, la seguridad de los datos y fondos de nuestros usuarios es nuestra máxima prioridad.", nav_home: "Inicio", nav_about: "Nosotros", nav_security: "Seguridad", nav_login: "Entrar", nav_navigation: "Navegación", nav_pro: "Cuenta Pro", nav_my_account: "Mi cuenta", nav_profile: "Mi perfil", nav_sec: "Seguridad de la cuenta", nav_logout: "Cerrar sesión", nav_dash: "Panel", nav_dep_hist: "Historial de Depósitos", nav_with_profit: "Retirar ganancias", nav_with_hist: "Historial de Retiros", nav_trans: "Todas las Transacciones", nav_sys_secure: "Sistema Seguro", nav_lang_settings: "Configuración de Idioma", lbl_user_email: "Usuario o Correo", lbl_password: "Contraseña", btn_login: "INICIAR SESIÓN", dont_have_acc: "¿No tienes una cuenta?", link_register_here: "Regístrate aquí", lbl_registration: "Registro de Miembro", lbl_fullname: "Tu Nombre Completo:", lbl_username: "Tu Usuario", lbl_email: "Correo Electrónico", lbl_wallet: "Dirección de Billetera", lbl_country: "País:", lbl_terms: "Acepto los Términos y condiciones", btn_register: "Registrarse", lbl_investment: "Monto de Inversión ($)", lbl_select_coin: "Seleccionar Moneda", lbl_usdt_network: "Red USDT", dash_welcome: "Bienvenido de nuevo,", dash_balance: "Balance Total", dash_withdraw: "Retirar", dash_earned: "Total Ganado", dash_withdrew: "Total Retirado", dash_pending: "Pendiente", dash_active: "Depósito Activo", dash_recent: "Actividad Reciente", dash_acc_created: "Cuenta Creada", dash_just_now: "Justo ahora", dash_invite: "Invitar y Ganar", dash_invite_desc: "Recargue automáticamente el saldo de su cuenta compartiendo su enlace de referido.", btn_save: "Guardar Cambios", lbl_current_pw: "Contraseña Actual", lbl_new_pw: "Nueva Contraseña", lbl_confirm_pw: "Confirmar Nueva Contraseña", btn_update_pw: "Actualizar Contraseña", empty_dep_title: "Aún no hay depósitos", empty_dep_desc: "Sus transacciones de depósito aparecerán aquí.", empty_with_title: "Aún no hay retiros", empty_with_desc: "Su historial de retiros aparecerá aquí.", table_type: "Tipo", table_amount: "Cantidad", table_status: "Estado", status_completed: "Completado" },
+            fr: { /* French */ logo: "WEALTH", hero_title1: "Wealth Fx limité", hero_title2: "MEILLEURE PLATEFORME.", hero_subtitle: "Négociez des matières premières populaires sur notre plateforme primée.", btn_get_started: "COMMENCER MAINTENANT", about_text: "Bienvenue chez Wealth Fx Limited, votre destination privilégiée pour des investissements sûrs et très rentables.", security_text: "Chez Wealth Fx Limited, la sécurité des données et des fonds de nos utilisateurs est notre priorité absolue.", nav_home: "Accueil", nav_about: "À Propos", nav_security: "Sécurité", nav_login: "Connexion", nav_navigation: "Navigation", nav_pro: "Compte Pro", nav_my_account: "Mon compte", nav_profile: "Mon profil", nav_sec: "Sécurité du compte", nav_logout: "Déconnexion", nav_dash: "Tableau de bord", nav_dep_hist: "Historique des Dépôts", nav_with_profit: "Retirer les bénéfices", nav_with_hist: "Historique des Retraits", nav_trans: "Toutes les Transactions", nav_sys_secure: "Système Sécurisé", nav_lang_settings: "Paramètres de Langue", lbl_user_email: "Utilisateur ou Email", lbl_password: "Mot de passe", btn_login: "CONNEXION", dont_have_acc: "Vous n'avez pas de compte ?", link_register_here: "S'inscrire ici", lbl_registration: "Enregistrement des Membres", lbl_fullname: "Votre Nom Complet:", lbl_username: "Votre Nom d'utilisateur", lbl_email: "Adresse E-mail", lbl_wallet: "Adresse du Portefeuille", lbl_country: "Pays:", lbl_terms: "J'accepte les Termes et conditions", btn_register: "S'inscrire", lbl_investment: "Montant de l'investissement ($)", lbl_select_coin: "Sélectionner la pièce", lbl_usdt_network: "Réseau USDT", dash_welcome: "Bon retour,", dash_balance: "Solde Total", dash_withdraw: "Retirer", dash_earned: "Total Gagné", dash_withdrew: "Total Retiré", dash_pending: "En attente", dash_active: "Dépôt Actif", dash_recent: "Activité Récente", dash_acc_created: "Compte Créé", dash_just_now: "Tout à l'heure", dash_invite: "Inviter & Gagner", dash_invite_desc: "Rechargez automatiquement le solde de votre compte en partageant votre lien de parrainage.", btn_save: "Sauvegarder", lbl_current_pw: "Mot de passe Actuel", lbl_new_pw: "Nouveau Mot de passe", lbl_confirm_pw: "Confirmer le Nouveau", btn_update_pw: "Mettre à jour", empty_dep_title: "Aucun dépôt pour le moment", empty_dep_desc: "Vos transactions de dépôt apparaîtront ici.", empty_with_title: "Aucun retrait pour le moment", empty_with_desc: "Votre historique de retrait apparaîtra ici.", table_type: "Type", table_amount: "Montant", table_status: "Statut", status_completed: "Terminé" },
+            ar: { /* Arabic */ logo: "WEALTH", hero_title1: "Wealth Fx المحدودة", hero_title2: "أفضل منصة.", hero_subtitle: "تداول السلع الشائعة على منصتنا الحائزة على جوائز.", btn_get_started: "ابدأ الآن", about_text: "مرحبًا بك في Wealth Fx Limited، وجهتك الأولى للاستثمارات الآمنة والمربحة للغاية.", security_text: "في Wealth Fx Limited، تعد أمان بيانات المستخدمين وأموالهم أولويتنا القصوى.", nav_home: "الرئيسية", nav_about: "من نحن", nav_security: "الأمان", nav_login: "تسجيل الدخول", nav_navigation: "التنقل", nav_pro: "حساب احترافي", nav_my_account: "حسابي", nav_profile: "ملفي الشخصي", nav_sec: "أمان الحساب", nav_logout: "تسجيل الخروج", nav_dash: "لوحة القيادة", nav_dep_hist: "تاريخ الإيداع", nav_with_profit: "سحب الأرباح", nav_with_hist: "تاريخ السحب", nav_trans: "جميع المعاملات", nav_sys_secure: "النظام آمن", nav_lang_settings: "إعدادات اللغة", lbl_user_email: "اسم المستخدم أو البريد", lbl_password: "كلمة المرور", btn_login: "تسجيل الدخول", dont_have_acc: "ليس لديك حساب؟", link_register_here: "سجل هنا", lbl_registration: "تسجيل الأعضاء", lbl_fullname: "اسمك الكامل:", lbl_username: "اسم المستخدم", lbl_email: "البريد الإلكتروني", lbl_wallet: "عنوان المحفظة", lbl_country: "الدولة:", lbl_terms: "أوافق على الشروط والأحكام", btn_register: "تسجيل", lbl_investment: "مبلغ الاستثمار ($)", lbl_select_coin: "اختر العملة", lbl_usdt_network: "شبكة USDT", dash_welcome: "مرحبا بعودتك،", dash_balance: "الرصيد الإجمالي", dash_withdraw: "سحب", dash_earned: "إجمالي الأرباح", dash_withdrew: "إجمالي المسحوب", dash_pending: "قيد الانتظار", dash_active: "إيداع نشط", dash_recent: "النشاط الأخير", dash_acc_created: "تم إنشاء الحساب", dash_just_now: "الآن", dash_invite: "ادعُ واربح", dash_invite_desc: "قم بتعبئة رصيد حسابك تلقائيًا من خلال مشاركة رابط الإحالة الخاص بك.", btn_save: "حفظ التغييرات", lbl_current_pw: "كلمة المرور الحالية", lbl_new_pw: "كلمة المرور الجديدة", lbl_confirm_pw: "تأكيد كلمة المرور", btn_update_pw: "تحديث كلمة المرور", empty_dep_title: "لا توجد إيداعات بعد", empty_dep_desc: "ستظهر معاملات الإيداع الخاصة بك هنا.", empty_with_title: "لا توجد عمليات سحب بعد", empty_with_desc: "سيظهر سجل السحب الخاص بك هنا.", table_type: "النوع", table_amount: "المبلغ", table_status: "الحالة", status_completed: "مكتمل" },
+            fa: { /* Persian */ logo: "WEALTH", hero_title1: "Wealth Fx محدود", hero_title2: "بهترین پلتفرم.", hero_subtitle: "تجارت کالاهای محبوب در پلتفرم برنده جوایز ما.", btn_get_started: "همین حالا شروع کنید", about_text: "به Wealth Fx Limited خوش آمدید، مقصد اصلی شما برای سرمایه گذاری های امن و بسیار سودآور.", security_text: "در Wealth Fx Limited، امنیت داده ها و سرمایه کاربران ما بالاترین اولویت را دارد.", nav_home: "خانه", nav_about: "درباره ما", nav_security: "امنیت", nav_login: "ورود", nav_navigation: "ناوبری", nav_pro: "حساب حرفه ای", nav_my_account: "حساب من", nav_profile: "پروفایل من", nav_sec: "امنیت حساب", nav_logout: "خروج", nav_dash: "داشبورد", nav_dep_hist: "تاریخچه واریز", nav_with_profit: "برداشت سود", nav_with_hist: "تاریخچه برداشت", nav_trans: "همه تراکنش ها", nav_sys_secure: "سیستم امن", nav_lang_settings: "تنظیمات زبان", lbl_user_email: "نام کاربری یا ایمیل", lbl_password: "رمز عبور", btn_login: "ورود", dont_have_acc: "حساب ندارید؟", link_register_here: "اینجا ثبت نام کنید", lbl_registration: "ثبت نام اعضا", lbl_fullname: "نام کامل شما:", lbl_username: "نام کاربری شما", lbl_email: "آدرس ایمیل", lbl_wallet: "آدرس کیف پول", lbl_country: "کشور:", lbl_terms: "من با شرایط و ضوابط موافقم", btn_register: "ثبت نام", lbl_investment: "مبلغ سرمایه گذاری ($)", lbl_select_coin: "انتخاب سکه", lbl_usdt_network: "شبکه USDT", dash_welcome: "خوش آمدید،", dash_balance: "موجودی کل", dash_withdraw: "برداشت", dash_earned: "کل درآمد", dash_withdrew: "کل برداشت", dash_pending: "در انتظار", dash_active: "واریز فعال", dash_recent: "فعالیت اخیر", dash_acc_created: "حساب ایجاد شد", dash_just_now: "همین الان", dash_invite: "دعوت و کسب درآمد", dash_invite_desc: "با به اشتراک گذاشتن لینک دعوت خود، موجودی حساب خود را به طور خودکار شارژ کنید.", btn_save: "ذخیره تغییرات", lbl_current_pw: "رمز عبور فعلی", lbl_new_pw: "رمز عبور جدید", lbl_confirm_pw: "تایید رمز عبور جدید", btn_update_pw: "به روز رسانی رمز عبور", empty_dep_title: "هنوز واریزی ندارید", empty_dep_desc: "تراکنش های واریز شما در اینجا ظاهر می شوند.", empty_with_title: "هنوز برداشتی ندارید", empty_with_desc: "تاریخچه برداشت شما در اینجا ظاهر می شود.", table_type: "نوع", table_amount: "مبلغ", table_status: "وضعیت", status_completed: "تکمیل شد" },
+            zh: { /* Chinese */ logo: "WEALTH", hero_title1: "Wealth Fx 有限", hero_title2: "最佳平台.", hero_subtitle: "在我们屡获殊荣的平台上交易热门商品。", btn_get_started: "立即开始", about_text: "欢迎来到 Wealth Fx Limited，您进行安全和高利润投资的首选目的地。", security_text: "在 Wealth Fx Limited，我们用户数据和资金的安全是我们的首要任务。", nav_home: "首页", nav_about: "关于我们", nav_security: "安全", nav_login: "登录", nav_navigation: "导航", nav_pro: "专业账户", nav_my_account: "我的账户", nav_profile: "我的个人资料", nav_sec: "账户安全", nav_logout: "登出", nav_dash: "仪表板", nav_dep_hist: "存款记录", nav_with_profit: "提取利润", nav_with_hist: "提款记录", nav_trans: "所有交易", nav_sys_secure: "系统安全", nav_lang_settings: "语言设置", lbl_user_email: "用户名或电子邮件", lbl_password: "密码", btn_login: "登录", dont_have_acc: "还没有账户？", link_register_here: "在此注册", lbl_registration: "会员注册", lbl_fullname: "您的全名：", lbl_username: "您的用户名", lbl_email: "电子邮件地址", lbl_wallet: "钱包地址", lbl_country: "国家：", lbl_terms: "我同意条款和条件", btn_register: "注册", lbl_investment: "投资金额 ($)", lbl_select_coin: "选择硬币", lbl_usdt_network: "USDT网络", dash_welcome: "欢迎回来，", dash_balance: "总余额", dash_withdraw: "提款", dash_earned: "总赚取", dash_withdrew: "总提款", dash_pending: "待处理", dash_active: "活跃存款", dash_recent: "最近活动", dash_acc_created: "账户已创建", dash_just_now: "刚刚", dash_invite: "邀请并赚取", dash_invite_desc: "通过分享您的推荐链接，自动为您的账户余额充值。", btn_save: "保存更改", lbl_current_pw: "当前密码", lbl_new_pw: "新密码", lbl_confirm_pw: "确认新密码", btn_update_pw: "更新密码", empty_dep_title: "暂无存款", empty_dep_desc: "您的存款交易将显示在这里。", empty_with_title: "暂无提款", empty_with_desc: "您的提款记录将显示在这里。", table_type: "类型", table_amount: "金额", table_status: "状态", status_completed: "已完成" }
+        };
+
+        ['ru', 'hi', 'pt', 'de', 'ja', 'ko', 'it', 'tr', 'vi', 'pl', 'uk', 'nl', 'th', 'id'].forEach(code => {
+            translations[code] = { ...translations.en, ...translations[code] };
+        });
+
+
+        function translatePage(lang) {
+            if (lang === 'ar' || lang === 'fa') {
+                document.documentElement.setAttribute('dir', 'rtl');
+            } else {
+                document.documentElement.setAttribute('dir', 'ltr');
+            }
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                } else if (translations['en'] && translations['en'][key]) {
+                    el.innerText = translations['en'][key];
+                }
+            });
+
+            document.querySelectorAll('.lang-selector').forEach(sel => {
+                sel.value = lang;
+            });
+
+            const langList = document.getElementById('settingsLangList');
+            if(langList) {
+                langList.innerHTML = ''; 
+                availableLanguages.forEach(l => {
+                    const li = document.createElement('li');
+                    li.innerText = l.name;
+                    if(l.code === lang) li.classList.add('active');
+                    li.onclick = () => {
+                        localStorage.setItem('wealthfx_lang', l.code);
+                        translatePage(l.code);
+                    };
+                    langList.appendChild(li);
+                });
+            }
+
+            localStorage.setItem('wealthfx_lang', lang);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.lang-selector').forEach(select => {
+                availableLanguages.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.code;
+                    option.textContent = lang.name;
+                    select.appendChild(option);
+                });
+                
+                select.addEventListener('change', (e) => {
+                    translatePage(e.target.value);
+                });
+            });
+
+            const savedLang = localStorage.getItem('wealthfx_lang') || 'en';
+            translatePage(savedLang);
+        });
+
+        // ==========================================
+        // 2. MOCK DATABASE (LocalStorage)
+        // ==========================================
+        if(!localStorage.getItem('wealthfx_users')) {
+            localStorage.setItem('wealthfx_users', JSON.stringify([]));
+        }
+
+        // ==========================================
+        // 3. VIEW NAVIGATION LOGIC
+        // ==========================================
+        const views = {
+            home: document.getElementById('homeView'),
+            about: document.getElementById('aboutView'),
+            security: document.getElementById('securityView'),
+            login: document.getElementById('loginView'),
+            register: document.getElementById('registrationView'),
+            dashboard: document.getElementById('dashboardView'),
+            depositHistory: document.getElementById('depositHistoryView'),
+            withdrawHistory: document.getElementById('withdrawHistoryView'),
+            allTransactions: document.getElementById('allTransactionsView'),
+            myProfile: document.getElementById('myProfileView'),
+            accountSecurity: document.getElementById('accountSecurityView'),
+            languageSettings: document.getElementById('languageSettingsView')
+        };
+
+        function showView(viewName) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            if(views[viewName]) {
+                views[viewName].classList.add('active');
+                views[viewName].scrollTop = 0;
+            }
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('menuOverlay').classList.remove('active');
+            document.getElementById('sideMenu').classList.remove('open');
+            document.getElementById('dashSideMenu').classList.remove('open');
+        }
+
+        document.querySelectorAll('.go-home').forEach(btn => btn.addEventListener('click', () => showView('home')));
+        document.getElementById('goToRegisterBtn').addEventListener('click', () => showView('register'));
+        document.getElementById('goToRegisterFromLogin').addEventListener('click', (e) => { e.preventDefault(); showView('register'); });
+
+        // ==========================================
+        // 4. SIDE MENU LOGIC
+        // ==========================================
+        const sideMenu = document.getElementById('sideMenu');
+        const dashSideMenu = document.getElementById('dashSideMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        function toggleMenu() {
+            const isDashboardArea = views.dashboard.classList.contains('active') || 
+                                    views.depositHistory.classList.contains('active') || 
+                                    views.withdrawHistory.classList.contains('active') ||
+                                    views.allTransactions.classList.contains('active') ||
+                                    views.myProfile.classList.contains('active') ||
+                                    views.accountSecurity.classList.contains('active') ||
+                                    views.languageSettings.classList.contains('active');
+
+            const isOpen = isDashboardArea ? dashSideMenu.classList.contains('open') : sideMenu.classList.contains('open');
+
+            if (isOpen) {
+                document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+                menuOverlay.classList.remove('active');
+                sideMenu.classList.remove('open');
+                dashSideMenu.classList.remove('open');
+            } else {
+                document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.add('active'));
+                menuOverlay.classList.add('active');
+                if (isDashboardArea) {
+                    dashSideMenu.classList.add('open');
+                } else {
+                    sideMenu.classList.add('open');
+                }
+            }
+        }
+
+        function toggleAccordion() {
+            const list = document.getElementById('accordionList');
+            const icon = document.getElementById('accordionIcon');
+            
+            if (list.style.display === 'block') {
+                list.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                list.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // ==========================================
+        // 5. AUTHENTICATION LOGIC & DYNAMIC FORM
+        // ==========================================
+
+        // Registration Page: Dynamic Wallet Selection
+        document.getElementById('regCoinType').addEventListener('change', function() {
+            const networkGroup = document.getElementById('usdtNetworkGroup');
+            if (this.value === 'USDT') {
+                networkGroup.style.display = 'block';
+            } else {
+                networkGroup.style.display = 'none';
+            }
+        });
+
+        // Profile Page: Dynamic Wallet Selection
+        document.getElementById('profileWalletType').addEventListener('change', function() {
+            const networkGroup = document.getElementById('profileUsdtNetworkGroup');
+            if (this.value === 'USDT') {
+                networkGroup.style.display = 'block';
+            } else {
+                networkGroup.style.display = 'none';
+            }
+        });
+
+        // Register Form Submit
+        document.getElementById('regForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitRegBtn');
+            const errorMsg = document.getElementById('regError');
+            errorMsg.style.display = 'none';
+            
+            const fullName = document.getElementById('regFullName').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+            const password = document.getElementById('regPassword').value;
+            const investment = document.getElementById('regInvestment').value;
+            const coinType = document.getElementById('regCoinType').value;
+            const wallet = document.getElementById('regWallet').value.trim();
+            const country = document.getElementById('regCountry').value.trim();
+            
+            let walletNetwork = null;
+            if (coinType === 'USDT') {
+                walletNetwork = document.getElementById('regUsdtNetwork').value;
+            }
+
+            let users = JSON.parse(localStorage.getItem('wealthfx_users'));
+            const userExists = users.find(u => u.username.toLowerCase() === username.toLowerCase() || u.email === email);
+
+            if (userExists) {
+                errorMsg.innerText = "Username or Email is already registered!";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            btn.innerText = "Registering...";
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const newUser = {
+                    fullName, username, email, password, wallet, country,
+                    investmentAmount: investment,
+                    walletType: coinType,
+                    walletNetwork: walletNetwork,
+                    balance: parseFloat(investment), 
+                    dateJoined: new Date().toISOString()
+                };
+
+                users.push(newUser);
+                localStorage.setItem('wealthfx_users', JSON.stringify(users));
+                localStorage.setItem('wealthfx_currentUser', JSON.stringify(newUser));
+
+                btn.innerText = translations[localStorage.getItem('wealthfx_lang') || 'en'].btn_register || "Register";
+                btn.disabled = false;
+                e.target.reset();
+                document.getElementById('usdtNetworkGroup').style.display = 'none';
+
+                loadDashboard(newUser);
+                showView('dashboard');
+                
+            }, 1000);
+        });
+
+        // Login Form Submit
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const identifier = document.getElementById('loginIdentifier').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorMsg = document.getElementById('loginError');
+            errorMsg.style.display = 'none';
+
+            let users = JSON.parse(localStorage.getItem('wealthfx_users'));
+            const user = users.find(u => (u.username.toLowerCase() === identifier.toLowerCase() || u.email === identifier.toLowerCase()) && u.password === password);
+
+            if (user) {
+                localStorage.setItem('wealthfx_currentUser', JSON.stringify(user));
+                e.target.reset();
+                loadDashboard(user);
+                showView('dashboard');
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        });
+
+        function loadDashboard(user) {
+            document.getElementById('displayUsername').innerText = user.username;
+            document.getElementById('menuUsernameDisplay').innerText = user.username;
+            document.getElementById('dynamicRefLink').value = `https://wealthfxlimited.com/?ref=${user.username}`;
+            document.getElementById('dashBalance').innerText = `$${user.balance.toFixed(2)}`;
+            
+            // Populate Profile data
+            document.getElementById('profileFullName').value = user.fullName || '';
+            document.getElementById('profileUsername').value = user.username || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            document.getElementById('profileInvestment').value = user.investmentAmount || 0;
+            document.getElementById('profileWalletType').value = user.walletType || 'Bitcoin';
+            document.getElementById('profileWallet').value = user.wallet || '';
+            document.getElementById('profileCountry').value = user.country || '';
+
+            // Handle dynamic USDT network for profile
+            const profNetworkGroup = document.getElementById('profileUsdtNetworkGroup');
+            if (user.walletType === 'USDT') {
+                profNetworkGroup.style.display = 'block';
+                document.getElementById('profileUsdtNetwork').value = user.walletNetwork || 'BEP20';
+            } else {
+                profNetworkGroup.style.display = 'none';
+            }
+        }
+
+        function logoutUser(e) {
+            if(e) e.preventDefault();
+            localStorage.removeItem('wealthfx_currentUser');
+            showView('home');
+        }
+
+        window.addEventListener('load', () => {
+            const currentUser = JSON.parse(localStorage.getItem('wealthfx_currentUser'));
+            if (currentUser) {
+                loadDashboard(currentUser);
+                showView('dashboard');
+            } else {
+                showView('home');
+            }
+        });
+
+        // ==========================================
+        // 6. UPDATE PROFILE & PASSWORD LOGIC
+        // ==========================================
+        document.getElementById('saveProfileBtn').addEventListener('click', () => {
+            const currentUser = JSON.parse(localStorage.getItem('wealthfx_currentUser'));
+            if (!currentUser) return;
+
+            const newName = document.getElementById('profileFullName').value.trim();
+            const newUsername = document.getElementById('profileUsername').value.trim();
+            const newEmail = document.getElementById('profileEmail').value.trim().toLowerCase();
+            
+            // Note: Investment is disabled, so we don't read it here, we keep the existing one
+            // const newInvestment = document.getElementById('profileInvestment').value;
+            
+            const newWalletType = document.getElementById('profileWalletType').value;
+            let newWalletNetwork = null;
+            if (newWalletType === 'USDT') {
+                newWalletNetwork = document.getElementById('profileUsdtNetwork').value;
+            }
+            const newWallet = document.getElementById('profileWallet').value.trim();
+            const newCountry = document.getElementById('profileCountry').value.trim();
+
+            if (!newName || !newUsername || !newEmail || !newWallet || !newCountry) {
+                alert("Please fill all fields.");
+                return;
+            }
+
+            let users = JSON.parse(localStorage.getItem('wealthfx_users'));
+            
+            const conflict = users.find(u => u.email !== currentUser.email && (u.username.toLowerCase() === newUsername.toLowerCase() || u.email === newEmail));
+            if (conflict) {
+                alert("Username or Email is already taken by another account.");
+                return;
+            }
+
+            // Update User Object (Investment amount remains unchanged)
+            currentUser.fullName = newName;
+            currentUser.username = newUsername;
+            currentUser.email = newEmail;
+            currentUser.walletType = newWalletType;
+            currentUser.walletNetwork = newWalletNetwork;
+            currentUser.wallet = newWallet;
+            currentUser.country = newCountry;
+            
+            const userIndex = users.findIndex(u => u.email === JSON.parse(localStorage.getItem('wealthfx_currentUser')).email); 
+            if (userIndex !== -1) {
+                users[userIndex] = currentUser;
+            }
+
+            localStorage.setItem('wealthfx_users', JSON.stringify(users));
+            localStorage.setItem('wealthfx_currentUser', JSON.stringify(currentUser));
+
+            loadDashboard(currentUser);
+            alert("Profile updated successfully!");
+        });
+
+        document.getElementById('updatePasswordBtn').addEventListener('click', () => {
+            const currentUser = JSON.parse(localStorage.getItem('wealthfx_currentUser'));
+            if (!currentUser) return;
+
+            const currentPw = document.getElementById('currentPassword').value;
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmNewPassword').value;
+
+            if (currentPw !== currentUser.password) {
+                alert("Incorrect current password.");
+                return;
+            }
+
+            if (!newPw || newPw !== confirmPw) {
+                alert("New passwords do not match or are empty.");
+                return;
+            }
+
+            let users = JSON.parse(localStorage.getItem('wealthfx_users'));
+            currentUser.password = newPw;
+
+            const userIndex = users.findIndex(u => u.email === currentUser.email);
+            if (userIndex !== -1) {
+                users[userIndex] = currentUser;
+            }
+
+            localStorage.setItem('wealthfx_users', JSON.stringify(users));
+            localStorage.setItem('wealthfx_currentUser', JSON.stringify(currentUser));
+
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+
+            alert("Password updated successfully!");
+        });
+
+        // ==========================================
+        // 7. WITHDRAW ALERT LOGIC
+        // ==========================================
+        function showWithdrawAlert(e) {
+            if (e) e.preventDefault();
+            alert("To process your withdrawal, please contact our support team.");
+            
+            // If the sidebar menu is open, close it
+            if (document.getElementById('menuOverlay').classList.contains('active')) {
+                toggleMenu();
+            }
+        }
+
+        // ==========================================
+        // 8. Misc Functions
+        // ==========================================
+        function copyRefLink() {
+            const copyText = document.getElementById("dynamicRefLink");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Referral link copied to clipboard!");
+        }
+
+        const dataContainer = document.getElementById('dataContainer');
+        const coins = ['<i class="fab fa-bitcoin"></i>', '<i class="fab fa-ethereum"></i>', '<i class="fas fa-dollar-sign"></i>'];
+        
+        function createFloatingNode() {
+            const node = document.createElement('div');
+            node.classList.add('data-node');
+            const randomType = Math.random();
+            
+            if (randomType < 0.3) {
+                node.classList.add('coin');
+                const coinIndex = Math.floor(Math.random() * coins.length);
+                node.innerHTML = coins[coinIndex];
+                if (coinIndex === 1) node.classList.add('eth');
+                if (coinIndex === 2) node.classList.add('usdt');
+            } else if (randomType < 0.7) {
+                node.classList.add('profit');
+                node.innerText = `+${(Math.random() * 50).toFixed(2)}%`;
+            } else {
+                node.classList.add('number');
+                node.innerText = (Math.random() * 100000).toFixed(2);
+            }
+            
+            node.style.left = `${Math.random() * 100}%`;
+            node.style.animationDuration = `${Math.random() * 8 + 7}s`;
+            node.style.animationDelay = `${Math.random() * 5}s`;
+            
+            dataContainer.appendChild(node);
+            setTimeout(() => node.remove(), 20000);
+        }
+        setInterval(createFloatingNode, 500);
+    </script>
+</body>
+</html>
